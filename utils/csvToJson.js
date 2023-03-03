@@ -1,11 +1,16 @@
-var camelCase = require('lodash').camelCase;
-
-function csvTojs(csv) {
-  var lines = csv.split('\n');
+function csvTojs(csv, headersValues) {
+  var lines = csv.split('#');
   var result = [];
-  var headers = lines[0].split(',');
+  var startPos = 0;
+  var headers = (headersValues && headersValues.split(',')) || lines[0].split(',');
 
-  for (var i = 1; i < lines.length; i++) {
+  if (headersValues) {
+    startPos = 0;
+  } else {
+    startPos = 1;
+  }
+
+  for (var i = startPos; i < lines.length; i++) {
     var obj = {};
 
     var row = lines[i],
@@ -24,12 +29,12 @@ function csvTojs(csv) {
       if (c === '"') {
         do {
           c = row[++idx];
-        } while (c !== '"' && idx < row.length - 1);
+        } while (c !== '"' && idx < row.length);
       }
 
       if (c === ',' || /* handle end of line with no comma */ idx === row.length - 1) {
         /* we've got a value */
-        var value = row.substr(startValueIdx, idx - startValueIdx).trim();
+        var value = row.substr(startValueIdx, idx - startValueIdx + 1).trim();
 
         /* skip first double quote */
         if (value[0] === '"') {
@@ -44,8 +49,14 @@ function csvTojs(csv) {
           value = value.substr(0, value.length - 1);
         }
 
-        var key = headers[queryIdx++];
-        obj[camelCase(key)] = value;
+        var key = 'value' + queryIdx;
+        if (queryIdx + 1 <= headers.length) {
+          key = headers[queryIdx++] || 'value' + queryIdx;
+        } else {
+          key = 'value' + queryIdx++;
+        }
+
+        obj[key] = value;
         startValueIdx = idx + 1;
       }
 
